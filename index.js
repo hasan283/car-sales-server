@@ -105,6 +105,13 @@ async function run() {
         });
 
         // User 
+
+        app.get('/users', verifyJWT, async (req, res) => {
+            const user = await userCollection.find().toArray();
+            res.send(user);
+        })
+
+
         app.put('/users/:email', async (req, res) => {
             const email = req.params.email;
             const user = req.body;
@@ -117,6 +124,27 @@ async function run() {
             const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
 
             res.send({ result, token });
+        });
+        // Your Users 
+        app.delete('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await userCollection.deleteOne(query);
+            res.send(result);
+        });
+
+
+        // Admin User 
+
+        app.put('/users/admin/:email', async (req, res) => {
+            const email = req.params.email;
+
+            const filter = { email: email };
+            const updateDoc = {
+                $set: { role: 'admin' },
+            };
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
         });
     }
     finally {
