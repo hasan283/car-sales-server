@@ -22,6 +22,7 @@ async function run() {
     try {
         await client.connect();
         const partsCollection = client.db("car-parts").collection("parts");
+        const orderCollection = client.db("car-parts").collection("order");
 
 
 
@@ -44,6 +45,21 @@ async function run() {
         app.post('/parts', async (req, res) => {
             const newParts = req.body;
             const result = await partsCollection.insertOne(newParts);
+            res.send(result);
+        })
+
+        //manage products delete
+        app.delete('/parts/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await partsCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        // Place Order 
+        app.post('/order', async (req, res) => {
+            const order = req.body;
+            const result = await orderCollection.insertOne(order);
             res.send(result);
         })
     }
