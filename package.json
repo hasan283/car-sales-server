@@ -10,7 +10,6 @@
   "name": "manufacturer-website-server",
   "version": "1.0.0",
   "main": "index.js",
-  "devDependencies": {},
   "scripts": {
     "start": "node index.js",
     "start-dev": "nodemon index.js",
