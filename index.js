@@ -2,8 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+require('dotenv').config();
 const app = express();
-require('dotenv').config()
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
 
@@ -42,6 +43,7 @@ async function run() {
         const partsCollection = client.db("car-parts").collection("parts");
         const orderCollection = client.db("car-parts").collection("order");
         const userCollection = client.db("car-parts").collection("users");
+        const paymentsCollection = client.db("car-parts").collection("payments");
 
 
 
@@ -96,14 +98,6 @@ async function run() {
 
         });
 
-        // Payment 
-        app.get('/order/:id', verifyJWT, async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: ObjectId(id) };
-            const order = await orderCollection.findOne(query);
-            res.send(order);
-        })
-
         // Your Order Delete 
         app.delete('/order/:id', async (req, res) => {
             const id = req.params.id;
@@ -111,6 +105,46 @@ async function run() {
             const result = await orderCollection.deleteOne(query);
             res.send(result);
         });
+
+
+        // Payment 
+
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const order = req.body;
+            const price = order.price;
+            const amount = price * 100;
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            });
+        });
+
+
+        app.get('/order/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const order = await orderCollection.findOne(query);
+            res.send(order);
+        })
+
+        app.patch('/order/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const payment = req.body;
+            const filter = { _id: ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    paid: true,
+                    transitionId: payment.transitionId,
+                }
+            }
+            const result = await paymentsCollection.insertOne(payment);
+            const updatedOrder = await orderCollection.updateOne(filter, updateDoc);
+            res.send(updateDoc);
+        })
 
         // User 
 
@@ -138,7 +172,9 @@ async function run() {
             const id = req.params.id;
             const query = { _id: ObjectId(id) };
             const result = await userCollection.deleteOne(query);
+            console.log(result)
             res.send(result);
+
         });
 
 
